@@ -1,10 +1,10 @@
-package gameplay;
+package deception.gameplay;
 
-import constant.GamePhase;
+import deception.constant.GamePhase;
 import lombok.Data;
-import model.PlayerInGame;
-import model.cards.ClueCard;
-import model.cards.MeansCard;
+import deception.model.PlayerInGame;
+import deception.model.cards.ClueCard;
+import deception.model.cards.MeansCard;
 import java.util.Map;
 import java.util.List;
 

@@ -1,9 +1,9 @@
-package model.cards;
+package deception.model.cards;
 
-import constant.CardType;
+import deception.constant.CardType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import model.abstract_model.Card;
+import deception.model.abstract_model.Card;
 
 @EqualsAndHashCode(callSuper = true)
 @Data

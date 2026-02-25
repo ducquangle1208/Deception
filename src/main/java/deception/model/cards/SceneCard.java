@@ -1,12 +1,12 @@
-package model.cards;
+package deception.model.cards;
 
-import constant.CardType;
-import constant.SceneType;
+import deception.constant.CardType;
+import deception.constant.SceneType;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.NoArgsConstructor;
-import model.abstract_model.Card;
+import deception.model.abstract_model.Card;
 
 import java.util.List;
 

@@ -1,12 +1,13 @@
-package service;
+package deception.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import deception.constant.SceneType;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import model.cards.ClueCard;
-import model.cards.MeansCard;
-import model.cards.SceneCard;
+import deception.model.cards.ClueCard;
+import deception.model.cards.MeansCard;
+import deception.model.cards.SceneCard;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;

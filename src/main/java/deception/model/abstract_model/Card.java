@@ -1,6 +1,6 @@
-package model.abstract_model;
+package deception.model.abstract_model;
 
-import constant.CardType;
+import deception.constant.CardType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

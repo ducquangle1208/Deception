@@ -1,19 +1,18 @@
-package service;
+package deception.service;
 
-import constant.GamePhase;
-import constant.RoleType;
-import gameplay.GameSession;
-import gameplay.SceneTileHint;
-import model.PlayerInGame;
-import model.abstract_model.Card;
-import model.cards.ClueCard;
-import model.cards.MeansCard;
-import model.cards.SceneCard;
+import deception.constant.GamePhase;
+import deception.constant.RoleType;
+import deception.constant.SceneType;
+import deception.gameplay.GameSession;
+import deception.gameplay.SceneTileHint;
+import deception.model.PlayerInGame;
+import deception.model.abstract_model.Card;
+import deception.model.cards.ClueCard;
+import deception.model.cards.MeansCard;
+import deception.model.cards.SceneCard;
 import org.springframework.stereotype.Service;
 
-import org.springframework.stereotype.Service;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class GameService {
@@ -66,8 +65,8 @@ public class GameService {
                 player.setHasBadge(false);
             } else {
                 // Các role khác nhận 4 thẻ Clue và 4 thẻ Means
-                player.setClueCards(drawCards(deckClues, 4));
-                player.setMeansCards(drawCards(deckMeans, 4));
+                player.setClueCards(drawCards(deckClues));
+                player.setMeansCards(drawCards(deckMeans));
                 player.setHasBadge(true);
             }
             playersMap.put(player.getPlayerId(), player);
@@ -78,15 +77,15 @@ public class GameService {
         List<SceneTileHint> boardHints = new ArrayList<>();
 
         // Theo luật: 1 Thẻ Nguyên nhân tử vong (Cause of Death)
-        SceneCard causeOfDeathCard = cardRegistry.getRandomSceneCardByType("CAUSE_OF_DEATH");
+        SceneCard causeOfDeathCard = cardRegistry.getRandomSceneCardByType(SceneType.CAUSE_OF_DEATH);
         boardHints.add(new SceneTileHint(causeOfDeathCard));
 
         // 1 Thẻ Địa điểm phạm tội (Location)
-        SceneCard locationCard = cardRegistry.getRandomSceneCardByType("LOCATION");
+        SceneCard locationCard = cardRegistry.getRandomSceneCardByType(SceneType.LOCATION_OF_CRIME);
         boardHints.add(new SceneTileHint(locationCard));
 
         // 4 Thẻ ngẫu nhiên (Random Scenes)
-        List<SceneCard> randomScenes = cardRegistry.getRandomSceneCardsByType("RANDOM", 4);
+        List<SceneCard> randomScenes = cardRegistry.getRandomSceneCardsByType(SceneType.RANDOM_SCENE, 4);
         for (SceneCard card : randomScenes) {
             boardHints.add(new SceneTileHint(card));
         }
@@ -96,9 +95,9 @@ public class GameService {
     }
 
     // Hàm helper rút bài
-    private <T extends Card> List<T> drawCards(List<T> deck, int count) {
+    private <T extends Card> List<T> drawCards(List<T> deck) {
         List<T> drawn = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < 4; i++) {
             drawn.add(deck.remove(0)); // Rút từ trên đầu bộ bài
         }
         return drawn;

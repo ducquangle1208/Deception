@@ -1,9 +1,9 @@
-package model;
+package deception.model;
 
-import constant.RoleType;
+import deception.constant.RoleType;
 import lombok.Data;
-import model.cards.ClueCard;
-import model.cards.MeansCard;
+import deception.model.cards.ClueCard;
+import deception.model.cards.MeansCard;
 
 import java.util.List;
 

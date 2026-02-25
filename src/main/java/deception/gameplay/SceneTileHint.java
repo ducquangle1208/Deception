@@ -1,8 +1,8 @@
-package gameplay;
+package deception.gameplay;
 
 import lombok.Data;
 
-import model.cards.SceneCard;
+import deception.model.cards.SceneCard;
 
 @Data
 public class SceneTileHint {

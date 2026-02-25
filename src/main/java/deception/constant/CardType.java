@@ -1,4 +1,4 @@
-package constant;
+package deception.constant;
 
 public enum CardType {
     MEANS,
