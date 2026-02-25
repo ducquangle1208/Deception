@@ -7,12 +7,11 @@ import model.abstract_model.Card;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class ClueCard extends Card {
+public class MeansCard extends Card {
 
-    private String clue;
-
+    private String weapon;
     @Override
     public CardType getType() {
-        return CardType.CLUE;
+        return CardType.MEANS;
     }
 }

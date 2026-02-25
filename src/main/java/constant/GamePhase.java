@@ -1,0 +1,11 @@
+package constant;
+
+public enum GamePhase {
+    WAITING_FOR_PLAYERS,
+    SETUP_ROLES_AND_CARDS,
+    CRIME_SELECTION,
+    FS_PLACING_HINTS,
+    DISCUSSION_PRESENTATION,
+    WITNESS_REVERSAL,
+    GAME_OVER
+}
