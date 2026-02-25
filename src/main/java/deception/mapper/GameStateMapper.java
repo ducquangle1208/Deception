@@ -36,7 +36,6 @@ public class GameStateMapper {
 
         // 4. Build DTO tổng
         return GameSessionDTO.builder()
-                .roomId(session.getRoomId())
                 .currentPhase(session.getCurrentPhase())
                 .currentRound(session.getCurrentRound())
                 .boardHints(session.getBoardHints())

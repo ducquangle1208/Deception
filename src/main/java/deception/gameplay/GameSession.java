@@ -10,7 +10,6 @@ import java.util.List;
 
 @Data
 public class GameSession {
-    private String roomId;
     private GamePhase currentPhase = GamePhase.WAITING_FOR_PLAYERS;
 
     // Quản lý người chơi trong phòng (Dùng Map với key là playerId để tra cứu nhanh)

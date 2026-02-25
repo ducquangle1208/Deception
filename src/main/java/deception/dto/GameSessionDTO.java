@@ -11,7 +11,6 @@ import java.util.List;
 @Data
 @Builder
 public class GameSessionDTO {
-    private String roomId;
     private GamePhase currentPhase;
     private int currentRound;
 
