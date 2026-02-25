@@ -1,5 +1,6 @@
 package deception.controller;
 
+import deception.dto.CrimeSelectionRequest;
 import deception.dto.GameSessionDTO;
 import deception.gameplay.GameSession;
 import deception.mapper.GameStateMapper;
@@ -10,14 +11,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/test")
-public class GameTestController {
+@RequestMapping("/api")
+public class GameController {
 
     private final GameStateMapper gameStateMapper;
     private final GameService gameService;
 
     // Inject GameStateMapper vào thông qua Constructor
-    public GameTestController(GameStateMapper gameStateMapper, GameService gameService) {
+    public GameController(GameStateMapper gameStateMapper, GameService gameService) {
         this.gameStateMapper = gameStateMapper;
         this.gameService = gameService;
     }
@@ -44,6 +45,22 @@ public class GameTestController {
             return ResponseEntity.ok(responseDTO);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(null); // Trả về lỗi nếu game chưa start
+        }
+    }
+
+    @PostMapping("/action/select-crime")
+    public ResponseEntity<?> selectCrime(@RequestBody CrimeSelectionRequest request) {
+        try {
+            // Gọi logic xử lý trong Service
+            gameService.selectCrime(request.getPlayerId(), request.getClueId(), request.getMeansId());
+
+            // Nếu thành công, trả về trạng thái Game hiện tại dưới góc nhìn của chính Kẻ Sát Nhân đó
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
+            return ResponseEntity.ok(updatedSession);
+
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // Trả về lỗi 400 Bad Request kèm thông báo (Ví dụ: "Gian lận: Chỉ Kẻ Sát Nhân mới được...")
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

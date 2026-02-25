@@ -27,9 +27,4 @@ public class GameSession {
     // Danh sách các Scene Tile đang hiển thị và vị trí viên đạn FS đã đặt
     private List<SceneTileHint> boardHints;
 
-    // Các hàm helper để chuyển state (Ví dụ)
-    public void advancePhase(GamePhase nextPhase) {
-        this.currentPhase = nextPhase;
-        // Có thể emit event WebSocket tại đây để báo cho toàn bộ client
-    }
 }

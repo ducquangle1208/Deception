@@ -100,4 +100,42 @@ public class GameService {
         }
         return drawn;
     }
+
+    // Thêm hàm này vào trong GameService
+    public synchronized void selectCrime(String playerId, String clueId, String meansId) {
+        GameSession session = getCurrentGame();
+
+        // 1. Kiểm tra xem có đúng là đang ở Phase Chọn đáp án không
+        if (session.getCurrentPhase() != GamePhase.CRIME_SELECTION) {
+            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn chọn Hung khí và Vật chứng!");
+        }
+
+        // 2. Tìm người chơi gửi request và kiểm tra Role
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Người chơi không tồn tại trong phòng!");
+        }
+        if (player.getRole() != RoleType.MURDERER) {
+            throw new IllegalArgumentException("Gian lận: Chỉ Kẻ Sát Nhân mới được phép chọn Đáp án!");
+        }
+
+        // 3. XÁC THỰC BÀI: Đảm bảo 2 lá bài được chọn THỰC SỰ nằm trên tay của Kẻ Sát Nhân
+        ClueCard selectedClue = player.getClueCards().stream()
+                .filter(c -> c.getId().equals(clueId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Manh mối (Clue) không hợp lệ hoặc không thuộc về bạn!"));
+
+        MeansCard selectedMeans = player.getMeansCards().stream()
+                .filter(m -> m.getId().equals(meansId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Hung khí (Means) không hợp lệ hoặc không thuộc về bạn!"));
+
+        // 4. Lưu Đáp án vào Session
+        session.setSolutionClue(selectedClue);
+        session.setSolutionMeans(selectedMeans);
+
+        // 5. Chuyển Phase sang cho Bác sĩ pháp y làm việc
+        // Theo luật chuẩn, sau khi chọn xong, Bác sĩ pháp y sẽ bắt đầu đặt 6 viên đạn lên các Scene Tile
+        session.setCurrentPhase(GamePhase.FS_PLACING_HINTS);
+    }
 }
