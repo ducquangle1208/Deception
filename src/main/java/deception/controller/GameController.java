@@ -3,6 +3,7 @@ package deception.controller;
 import deception.dto.CrimeSelectionRequest;
 import deception.dto.FsPlaceHintRequest;
 import deception.dto.GameSessionDTO;
+import deception.dto.SolveAttemptRequest;
 import deception.gameplay.GameSession;
 import deception.mapper.GameStateMapper;
 import deception.service.GameService;
@@ -18,7 +19,6 @@ public class GameController {
     private final GameStateMapper gameStateMapper;
     private final GameService gameService;
 
-    // Inject GameStateMapper vào thông qua Constructor
     public GameController(GameStateMapper gameStateMapper, GameService gameService) {
         this.gameStateMapper = gameStateMapper;
         this.gameService = gameService;
@@ -78,4 +78,43 @@ public class GameController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/action/solve-attempt")
+    public ResponseEntity<?> attemptToSolve(@RequestBody SolveAttemptRequest request) {
+        try {
+            gameService.attemptToSolve(request.getPlayerId(), request.getTargetPlayerId(), request.getClueId(), request.getMeansId());
+
+            // Trả về state cập nhật để Client biết:
+            // - Huy hiệu của người này đã mất (hasBadge = false)
+            // - Phase có bị chuyển thành WITNESS_REVERSAL không
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
+            return ResponseEntity.ok(updatedSession);
+
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/action/start-presentation/{playerId}")
+    public ResponseEntity<?> startPresentation(@PathVariable String playerId) {
+        try {
+            gameService.startPresentation(playerId);
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
+            return ResponseEntity.ok(updatedSession);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/action/end-presentation/{playerId}")
+    public ResponseEntity<?> endPresentationEarly(@PathVariable String playerId) {
+        try {
+            gameService.endPresentationEarly(playerId);
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
+            return ResponseEntity.ok(updatedSession);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

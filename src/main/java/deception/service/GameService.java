@@ -182,4 +182,92 @@ public class GameService {
         // 5. Chuyển Phase sang giai đoạn Thảo Luận & Phá Án
         session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
     }
+
+    /**
+     * Hàm này đại diện cho phase có người muốn phá án.
+     *
+     * @param playerId Id của người đang muốn phá án
+     * @param targetPlayerId Id của người được cho là kẻ ám sát
+     * @param clueId Hiện vật của người được cho là kẻ ám sát
+     * @param meansId Vũ khí của nguười được cho là kẻ ám sát
+     */
+    public synchronized void attemptToSolve(String playerId, String targetPlayerId, String clueId, String meansId) {
+        GameSession session = getCurrentGame();
+
+        // 1. Kiểm tra Phase
+        if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
+            throw new IllegalStateException("Hành động bị từ chối: Chỉ được phép phá án trong giai đoạn Thảo luận!");
+        }
+
+        // 2. Lấy thông tin người chơi đang thử phá án
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Người chơi không tồn tại!");
+        }
+
+        // Bác sĩ Pháp Y không được phép phá án
+        if (player.getRole() == RoleType.FORENSIC_SCIENTIST) {
+            throw new IllegalArgumentException("Gian lận: Bác sĩ Pháp Y không được phép phá án!");
+        }
+
+        // Kiểm tra xem họ còn Huy hiệu không
+        if (!player.isHasBadge()) {
+            throw new IllegalStateException("Bạn đã sử dụng hết Huy hiệu phá án!");
+        }
+
+        // 3. THU HỒI HUY HIỆU (Bất kể đúng hay sai, cứ thử là mất huy hiệu)
+        player.setHasBadge(false);
+
+        // 4. KIỂM TRA ĐÁP ÁN (Sự thật phơi bày)
+        // Chúng ta so sánh 3 yếu tố: Kẻ sát nhân, Manh mối, Hung khí
+        boolean isCorrectTarget = session.getPlayers().get(targetPlayerId).getRole() == RoleType.MURDERER;
+        boolean isCorrectClue = session.getSolutionClue().getId().equals(clueId);
+        boolean isCorrectMeans = session.getSolutionMeans().getId().equals(meansId);
+
+        if (isCorrectTarget && isCorrectClue && isCorrectMeans) {
+            // PHÁ ÁN THÀNH CÔNG!
+            // Game chuyển sang Phase cuối: Cho phép Sát Nhân/Tòng Phạm lật ngược thế cờ bằng cách tìm ra Nhân Chứng
+            session.setCurrentPhase(GamePhase.WITNESS_REVERSAL);
+        } else {
+            /*
+            * Game goes on
+            */
+        }
+    }
+
+    public synchronized void startPresentation(String playerId) {
+        GameSession session = getCurrentGame();
+
+        if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
+            throw new IllegalStateException("Chỉ được trình bày trong phase Thảo luận!");
+        }
+
+        if (session.isTimerActive()) {
+            long remainingSeconds = (session.getPresentationEndTime() - System.currentTimeMillis()) / 1000;
+            throw new IllegalStateException("Hành động bị từ chối: Người chơi "
+                    + session.getPresentingPlayerId() + " đang trình bày. Vui lòng đợi "
+                    + remainingSeconds + " giây nữa!");
+        }
+
+        // Set timer 45 sec
+        session.setPresentingPlayerId(playerId);
+        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
+
+    }
+
+    /**
+     * Player can end their presentation sooner than 45 sec by calling this method.
+     *
+     * @param playerId who currently is presenting
+     */
+    public synchronized void endPresentationEarly(String playerId) {
+        GameSession session = getCurrentGame();
+
+        if (session.isTimerActive() && playerId.equals(session.getPresentingPlayerId())) {
+            session.setPresentationEndTime(0);
+            session.setPresentingPlayerId(null);
+        } else {
+            throw new IllegalStateException("Bạn không có quyền kết thúc lượt của người khác!");
+        }
+    }
 }

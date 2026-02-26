@@ -11,6 +11,8 @@ import java.util.List;
 @Data
 @Builder
 public class GameSessionDTO {
+    private String presentingPlayerId;
+    private long presentationEndTime;
     private GamePhase currentPhase;
     private int currentRound;
 

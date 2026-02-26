@@ -12,6 +12,10 @@ import java.util.List;
 public class GameSession {
     private GamePhase currentPhase = GamePhase.WAITING_FOR_PLAYERS;
 
+    private String presentingPlayerId = null;
+
+    private long presentationEndTime = 0;
+
     // Quản lý người chơi trong phòng (Dùng Map với key là playerId để tra cứu nhanh)
     private Map<String, PlayerInGame> players;
 
@@ -26,5 +30,9 @@ public class GameSession {
     // --- BÀN CHƠI CHUNG (BOARD) ---
     // Danh sách các Scene Tile đang hiển thị và vị trí viên đạn FS đã đặt
     private List<SceneTileHint> boardHints;
+
+    public boolean isTimerActive() {
+        return System.currentTimeMillis() < presentationEndTime;
+    }
 
 }

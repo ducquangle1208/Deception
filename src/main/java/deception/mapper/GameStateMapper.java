@@ -42,6 +42,8 @@ public class GameStateMapper {
                 .players(playerDTOs)
                 .solutionClue(canSeeSolution ? session.getSolutionClue() : null)
                 .solutionMeans(canSeeSolution ? session.getSolutionMeans() : null)
+                .presentingPlayerId(session.getPresentingPlayerId())
+                .presentationEndTime(session.getPresentationEndTime())
                 .build();
     }
 
