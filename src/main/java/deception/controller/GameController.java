@@ -1,9 +1,6 @@
 package deception.controller;
 
-import deception.dto.CrimeSelectionRequest;
-import deception.dto.FsPlaceHintRequest;
-import deception.dto.GameSessionDTO;
-import deception.dto.SolveAttemptRequest;
+import deception.dto.*;
 import deception.gameplay.GameSession;
 import deception.mapper.GameStateMapper;
 import deception.service.GameService;
@@ -28,16 +25,13 @@ public class GameController {
     public ResponseEntity<GameSessionDTO> createRealGame() {
         List<String> realPlayerIds = Arrays.asList("user_1", "user_2", "user_3", "user_4", "user_5", "user_6");
 
-        // Gọi Service tạo game (không cần roomId)
         gameService.setupNewGame(realPlayerIds);
 
-        // Lấy state trả về dưới góc nhìn của user_1
         GameSessionDTO responseDTO = gameStateMapper.toDTO(gameService.getCurrentGame(), "user_1");
 
         return ResponseEntity.ok(responseDTO);
     }
 
-    // API lấy state hiện tại của game (Để các client gọi)
     @GetMapping("/current-state/{requesterId}")
     public ResponseEntity<GameSessionDTO> getCurrentState(@PathVariable String requesterId) {
         try {
@@ -45,22 +39,19 @@ public class GameController {
             GameSessionDTO responseDTO = gameStateMapper.toDTO(currentSession, requesterId);
             return ResponseEntity.ok(responseDTO);
         } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(null); // Trả về lỗi nếu game chưa start
+            return ResponseEntity.badRequest().body(null);
         }
     }
 
     @PostMapping("/action/select-crime")
     public ResponseEntity<?> selectCrime(@RequestBody CrimeSelectionRequest request) {
         try {
-            // Gọi logic xử lý trong Service
             gameService.selectCrime(request.getPlayerId(), request.getClueId(), request.getMeansId());
 
-            // Nếu thành công, trả về trạng thái Game hiện tại dưới góc nhìn của chính Kẻ Sát Nhân đó
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
             return ResponseEntity.ok(updatedSession);
 
         } catch (IllegalStateException | IllegalArgumentException e) {
-            // Trả về lỗi 400 Bad Request kèm thông báo (Ví dụ: "Gian lận: Chỉ Kẻ Sát Nhân mới được...")
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -70,7 +61,6 @@ public class GameController {
         try {
             gameService.placeInitialHints(request.getPlayerId(), request.getHints());
 
-            // Trả về Board State để kiểm tra xem 6 thẻ đã có "viên đạn" (selectedOption) chưa
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
             return ResponseEntity.ok(updatedSession);
 
@@ -84,9 +74,6 @@ public class GameController {
         try {
             gameService.attemptToSolve(request.getPlayerId(), request.getTargetPlayerId(), request.getClueId(), request.getMeansId());
 
-            // Trả về state cập nhật để Client biết:
-            // - Huy hiệu của người này đã mất (hasBadge = false)
-            // - Phase có bị chuyển thành WITNESS_REVERSAL không
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
             return ResponseEntity.ok(updatedSession);
 
@@ -113,6 +100,27 @@ public class GameController {
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
             return ResponseEntity.ok(updatedSession);
         } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/action/replace-tile")
+    public ResponseEntity<?> replaceTile(@RequestBody ReplaceTileRequest request) {
+        try {
+            gameService.replaceSceneTile(request.getOldCardId(), request.getNewCardOption());
+            return ResponseEntity.ok(gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/action/next-round/{playerId}")
+    public ResponseEntity<?> triggerNextRound(@PathVariable String playerId) {
+        try {
+            gameService.startNextRound(playerId);
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
+            return ResponseEntity.ok(updatedSession);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

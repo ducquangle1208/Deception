@@ -16,7 +16,6 @@ import java.util.List;
 @SuperBuilder
 public class SceneCard extends Card {
 
-    // Ví dụ: ["Phòng khách", "Nhà bếp", "Công viên", "Siêu thị", "Trường học", "Nhà kho"]
     private List<String> options;
 
     private SceneType sceneType;

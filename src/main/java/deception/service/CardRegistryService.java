@@ -20,7 +20,6 @@ public class CardRegistryService {
 
     private final ObjectMapper objectMapper;
 
-    // Lưu trữ in-memory
     private List<ClueCard> allClueCards = new ArrayList<>();
     private List<MeansCard> allMeansCards = new ArrayList<>();
     private List<SceneCard> allSceneCards = new ArrayList<>();
@@ -33,7 +32,6 @@ public class CardRegistryService {
     public void init() {
         log.info("Bắt đầu load dữ liệu thẻ bài vào RAM...");
         try {
-            // Đọc file từ thư mục src/main/resources/static/data/
             allClueCards = loadCardsFromFile("/data/clue_cards.json", new TypeReference<>() {});
             allMeansCards = loadCardsFromFile("/data/means_cards.json", new TypeReference<>() {});
             allSceneCards = loadCardsFromFile("/data/scene_cards.json", new TypeReference<>() {});
@@ -46,7 +44,6 @@ public class CardRegistryService {
         }
     }
 
-    // Hàm helper đọc file JSON
     private <T> List<T> loadCardsFromFile(String filePath, TypeReference<List<T>> typeReference) throws Exception {
         try (InputStream is = getClass().getResourceAsStream(filePath)) {
             if (is == null) {
@@ -56,10 +53,8 @@ public class CardRegistryService {
         }
     }
 
-    // --- CÁC HÀM GETTER ĐỂ GAMESERVICE SỬ DỤNG ---
 
     public List<ClueCard> getAllClueCards() {
-        // Trả về bản copy để tránh bị modify list gốc khi xáo bài
         return new ArrayList<>(allClueCards);
     }
 
@@ -67,7 +62,6 @@ public class CardRegistryService {
         return new ArrayList<>(allMeansCards);
     }
 
-    // Lấy ngẫu nhiên 1 thẻ Scene theo loại (VD: CAUSE_OF_DEATH)
     public SceneCard getRandomSceneCardByType(SceneType type) {
         List<SceneCard> filteredCards = allSceneCards.stream()
                 .filter(card -> card.getSceneType() == type)
@@ -81,7 +75,6 @@ public class CardRegistryService {
         return filteredCards.get(0);
     }
 
-    // Lấy ngẫu nhiên N thẻ Scene theo loại (Dành cho RANDOM_SCENE)
     public List<SceneCard> getRandomSceneCardsByType(SceneType type, int count) {
         List<SceneCard> filteredCards = allSceneCards.stream()
                 .filter(card -> card.getSceneType() == type)
@@ -92,6 +85,6 @@ public class CardRegistryService {
         }
 
         Collections.shuffle(filteredCards);
-        return filteredCards.subList(0, count); // Lấy `count` phần tử đầu tiên
+        return filteredCards.subList(0, count);
     }
 }
