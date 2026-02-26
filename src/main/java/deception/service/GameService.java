@@ -138,4 +138,48 @@ public class GameService {
         // Theo luật chuẩn, sau khi chọn xong, Bác sĩ pháp y sẽ bắt đầu đặt 6 viên đạn lên các Scene Tile
         session.setCurrentPhase(GamePhase.FS_PLACING_HINTS);
     }
+
+    // Thêm hàm này vào GameService
+    public synchronized void placeInitialHints(String playerId, Map<String, String> hints) {
+        GameSession session = getCurrentGame();
+
+        // 1. Kiểm tra Phase
+        if (session.getCurrentPhase() != GamePhase.FS_PLACING_HINTS) {
+            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn Bác sĩ pháp y đặt Hint!");
+        }
+
+        // 2. Kiểm tra Role
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null || player.getRole() != RoleType.FORENSIC_SCIENTIST) {
+            throw new IllegalArgumentException("Gian lận: Chỉ Bác sĩ pháp y mới được quyền đặt Hint!");
+        }
+
+        // 3. Kiểm tra số lượng Hint
+        if (hints == null || hints.size() != 6) {
+            throw new IllegalArgumentException("Bác sĩ pháp y bắt buộc phải đặt chính xác 6 viên đạn lên 6 thẻ hiện trường!");
+        }
+
+        // 4. Validate và Cập nhật vị trí viên đạn vào Board
+        for (SceneTileHint boardHint : session.getBoardHints()) {
+            String cardId = boardHint.getSceneCard().getId();
+
+            // Check xem FS có gửi ID thẻ này lên không
+            if (!hints.containsKey(cardId)) {
+                throw new IllegalArgumentException("Thiếu Hint cho thẻ hiện trường: " + boardHint.getSceneCard().getName());
+            }
+
+            String selectedOption = hints.get(cardId);
+
+            // Chống Hack: Check xem Text gửi lên có thực sự nằm trong 6 lựa chọn của thẻ đó không
+            if (!boardHint.getSceneCard().getOptions().contains(selectedOption)) {
+                throw new IllegalArgumentException("Lựa chọn '" + selectedOption + "' không tồn tại trên thẻ " + boardHint.getSceneCard().getName());
+            }
+
+            // Ghi nhận viên đạn đã được đặt
+            boardHint.setSelectedOption(selectedOption);
+        }
+
+        // 5. Chuyển Phase sang giai đoạn Thảo Luận & Phá Án
+        session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
+    }
 }

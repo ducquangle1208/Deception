@@ -1,6 +1,7 @@
 package deception.controller;
 
 import deception.dto.CrimeSelectionRequest;
+import deception.dto.FsPlaceHintRequest;
 import deception.dto.GameSessionDTO;
 import deception.gameplay.GameSession;
 import deception.mapper.GameStateMapper;
@@ -60,6 +61,20 @@ public class GameController {
 
         } catch (IllegalStateException | IllegalArgumentException e) {
             // Trả về lỗi 400 Bad Request kèm thông báo (Ví dụ: "Gian lận: Chỉ Kẻ Sát Nhân mới được...")
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/action/place-hints")
+    public ResponseEntity<?> placeInitialHints(@RequestBody FsPlaceHintRequest request) {
+        try {
+            gameService.placeInitialHints(request.getPlayerId(), request.getHints());
+
+            // Trả về Board State để kiểm tra xem 6 thẻ đã có "viên đạn" (selectedOption) chưa
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
+            return ResponseEntity.ok(updatedSession);
+
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

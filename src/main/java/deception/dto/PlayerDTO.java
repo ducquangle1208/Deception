@@ -13,7 +13,7 @@ public class PlayerDTO {
     private String playerId;
     private String playerName;
 
-    private VisibleRole role; // Đã đổi sang VisibleRole thay vì RoleType gốc
+    private VisibleRole role;
 
     private List<ClueCard> clueCards;
     private List<MeansCard> meansCards;
