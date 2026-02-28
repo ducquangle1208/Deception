@@ -125,4 +125,18 @@ public class GameController {
         }
     }
 
+    @PostMapping("/action/witness-reversal")
+    public ResponseEntity<?> attemptWitnessReversal(@RequestBody WitnessReversalRequest request) {
+        try {
+            gameService.attemptWitnessReversal(request.getPlayerId(), request.getSuspectId());
+
+            // Lấy State mới nhất trả về (Lúc này phase đã là GAME_OVER và đã có winningSide)
+            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
+            return ResponseEntity.ok(updatedSession);
+
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

@@ -1,5 +1,6 @@
 package deception.mapper;
 
+import deception.constant.GamePhase;
 import deception.constant.RoleType;
 import deception.constant.VisibleRole;
 import deception.dto.GameSessionDTO;
@@ -24,7 +25,7 @@ public class GameStateMapper {
 
         List<PlayerDTO> playerDTOs = new ArrayList<>();
         for (PlayerInGame p : session.getPlayers().values()) {
-            playerDTOs.add(mapPlayer(p, myRole, requestingPlayerId));
+            playerDTOs.add(mapPlayer(session,p, myRole, requestingPlayerId));
         }
 
         boolean canSeeSolution = (myRole == RoleType.FORENSIC_SCIENTIST
@@ -45,10 +46,13 @@ public class GameStateMapper {
     }
 
 
-    private PlayerDTO mapPlayer(PlayerInGame targetPlayer, RoleType myRole, String myPlayerId) {
+    private PlayerDTO mapPlayer(GameSession session, PlayerInGame targetPlayer, RoleType myRole, String myPlayerId) {
         VisibleRole visibleRole;
 
-        if (targetPlayer.getRole() == RoleType.FORENSIC_SCIENTIST) {
+        if (session.getCurrentPhase() == GamePhase.GAME_OVER) {
+            visibleRole = VisibleRole.valueOf(targetPlayer.getRole().name());
+        }
+        else if (targetPlayer.getRole() == RoleType.FORENSIC_SCIENTIST) {
             visibleRole = VisibleRole.FORENSIC_SCIENTIST;
         }
         else if (targetPlayer.getPlayerId().equals(myPlayerId)) {

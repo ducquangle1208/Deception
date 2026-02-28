@@ -303,4 +303,33 @@ public class GameService {
 
         session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
     }
+
+    public synchronized void attemptWitnessReversal(String playerId, String suspectId) {
+        GameSession session = getCurrentGame();
+
+        if (session.getCurrentPhase() != GamePhase.WITNESS_REVERSAL) {
+            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn Lật Kèo!");
+        }
+
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null || player.getRole() != RoleType.MURDERER) {
+            throw new IllegalArgumentException("Gian lận: Chỉ Kẻ Sát Nhân mới được quyền chỉ điểm Nhân Chứng!");
+        }
+
+        PlayerInGame suspect = session.getPlayers().get(suspectId);
+        if (suspect == null) {
+            throw new IllegalArgumentException("Người bị chỉ điểm không tồn tại!");
+        }
+        if (suspect.getPlayerId().equals(playerId)) {
+            throw new IllegalArgumentException("Sát nhân không thể tự chỉ điểm chính mình!");
+        }
+
+        if (suspect.getRole() == RoleType.WITNESS) {
+            session.setWinningSide(RoleType.MURDERER);
+        } else {
+            session.setWinningSide(RoleType.INVESTIGATOR);
+        }
+
+        session.setCurrentPhase(GamePhase.GAME_OVER);
+    }
 }
