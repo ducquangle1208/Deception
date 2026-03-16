@@ -3,6 +3,7 @@ package deception.controller;
 import deception.dto.*;
 import deception.gameplay.GameSession;
 import deception.mapper.GameStateMapper;
+import deception.service.GameNotificationService;
 import deception.service.GameService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +16,12 @@ public class GameController {
 
     private final GameStateMapper gameStateMapper;
     private final GameService gameService;
+    private final GameNotificationService notificationService;
 
-    public GameController(GameStateMapper gameStateMapper, GameService gameService) {
+    public GameController(GameStateMapper gameStateMapper, GameService gameService, GameNotificationService notificationService) {
         this.gameStateMapper = gameStateMapper;
         this.gameService = gameService;
+        this.notificationService = notificationService;
     }
 
     @PostMapping("/create-real-game")
@@ -47,9 +50,9 @@ public class GameController {
     public ResponseEntity<?> selectCrime(@RequestBody CrimeSelectionRequest request) {
         try {
             gameService.selectCrime(request.getPlayerId(), request.getClueId(), request.getMeansId());
-
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
-            return ResponseEntity.ok(updatedSession);
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+            return ResponseEntity.ok("Tội ác đã được ghi nhận!");
 
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -60,9 +63,9 @@ public class GameController {
     public ResponseEntity<?> placeInitialHints(@RequestBody FsPlaceHintRequest request) {
         try {
             gameService.placeInitialHints(request.getPlayerId(), request.getHints());
-
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
-            return ResponseEntity.ok(updatedSession);
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+            return ResponseEntity.ok("Hints đã được đặt!");
 
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -74,8 +77,11 @@ public class GameController {
         try {
             gameService.attemptToSolve(request.getPlayerId(), request.getTargetPlayerId(), request.getClueId(), request.getMeansId());
 
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
-            return ResponseEntity.ok(updatedSession);
+            GameSession currentSession = gameService.getCurrentGame();
+
+            notificationService.broadcastGameState(currentSession);
+
+            return ResponseEntity.ok("Phá án đã được ghi nhận!");
 
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -86,8 +92,9 @@ public class GameController {
     public ResponseEntity<?> startPresentation(@PathVariable String playerId) {
         try {
             gameService.startPresentation(playerId);
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
-            return ResponseEntity.ok(updatedSession);
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+            return ResponseEntity.ok("Người chơi " + playerId + "trình bày!");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -118,8 +125,9 @@ public class GameController {
     public ResponseEntity<?> triggerNextRound(@PathVariable String playerId) {
         try {
             gameService.startNextRound(playerId);
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
-            return ResponseEntity.ok(updatedSession);
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+            return ResponseEntity.ok("");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -129,6 +137,8 @@ public class GameController {
     public ResponseEntity<?> attemptWitnessReversal(@RequestBody WitnessReversalRequest request) {
         try {
             gameService.attemptWitnessReversal(request.getPlayerId(), request.getSuspectId());
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
 
             // Lấy State mới nhất trả về (Lúc này phase đã là GAME_OVER và đã có winningSide)
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
