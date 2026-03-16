@@ -277,11 +277,16 @@ public class GameService {
         session.setCurrentPhase(GamePhase.FS_REPLACING_HINT);
     }
 
-    public synchronized void replaceSceneTile(String oldCardId, String newCardOption) {
+    public synchronized void replaceSceneTile(String playerId, String oldCardId, String newCardOption) {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.FS_REPLACING_HINT) {
             throw new IllegalStateException("Không phải lúc để thay thẻ!");
+        }
+
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null || player.getRole() != RoleType.FORENSIC_SCIENTIST) {
+            throw new IllegalArgumentException("Chỉ Bác sĩ Pháp Y mới có quyền thay thế thẻ hiện trường!");
         }
 
         SceneTileHint toRemove = session.getBoardHints().stream()

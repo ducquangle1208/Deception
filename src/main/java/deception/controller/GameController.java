@@ -30,8 +30,10 @@ public class GameController {
 
         gameService.setupNewGame(realPlayerIds);
 
-        GameSessionDTO responseDTO = gameStateMapper.toDTO(gameService.getCurrentGame(), "user_1");
+        GameSession currentSession = gameService.getCurrentGame();
+        notificationService.broadcastGameState(currentSession);
 
+        GameSessionDTO responseDTO = gameStateMapper.toDTO(currentSession, "user_1");
         return ResponseEntity.ok(responseDTO);
     }
 
@@ -104,18 +106,26 @@ public class GameController {
     public ResponseEntity<?> endPresentationEarly(@PathVariable String playerId) {
         try {
             gameService.endPresentationEarly(playerId);
-            GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), playerId);
-            return ResponseEntity.ok(updatedSession);
+
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+
+            return ResponseEntity.ok("Đã kết thúc lượt trình bày sớm!");
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
+
     @PatchMapping("/action/replace-tile")
     public ResponseEntity<?> replaceTile(@RequestBody ReplaceTileRequest request) {
         try {
-            gameService.replaceSceneTile(request.getOldCardId(), request.getNewCardOption());
-            return ResponseEntity.ok(gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId()));
+            gameService.replaceSceneTile(request.getPlayerId(), request.getOldCardId(), request.getNewCardOption());
+
+            GameSession currentSession = gameService.getCurrentGame();
+            notificationService.broadcastGameState(currentSession);
+
+            return ResponseEntity.ok("Đã thay thẻ thành công!");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -140,7 +150,6 @@ public class GameController {
             GameSession currentSession = gameService.getCurrentGame();
             notificationService.broadcastGameState(currentSession);
 
-            // Lấy State mới nhất trả về (Lúc này phase đã là GAME_OVER và đã có winningSide)
             GameSessionDTO updatedSession = gameStateMapper.toDTO(gameService.getCurrentGame(), request.getPlayerId());
             return ResponseEntity.ok(updatedSession);
 
