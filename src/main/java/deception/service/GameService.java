@@ -38,8 +38,7 @@ public class GameService {
 
         List<RoleType> roles = Arrays.asList(
                 RoleType.FORENSIC_SCIENTIST, RoleType.MURDERER, RoleType.ACCOMPLICE,
-                RoleType.WITNESS, RoleType.INVESTIGATOR, RoleType.INVESTIGATOR
-        );
+                RoleType.WITNESS, RoleType.INVESTIGATOR, RoleType.INVESTIGATOR);
         Collections.shuffle(roles);
 
         List<ClueCard> deckClues = cardRegistry.getAllClueCards();
@@ -99,7 +98,8 @@ public class GameService {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.CRIME_SELECTION) {
-            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn chọn Hung khí và Vật chứng!");
+            throw new IllegalStateException(
+                    "Hành động bị từ chối: Hiện không phải là giai đoạn chọn Hung khí và Vật chứng!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
@@ -113,12 +113,14 @@ public class GameService {
         ClueCard selectedClue = player.getClueCards().stream()
                 .filter(c -> c.getId().equals(clueId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Manh mối (Clue) không hợp lệ hoặc không thuộc về bạn!"));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Manh mối (Clue) không hợp lệ hoặc không thuộc về bạn!"));
 
         MeansCard selectedMeans = player.getMeansCards().stream()
                 .filter(m -> m.getId().equals(meansId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Hung khí (Means) không hợp lệ hoặc không thuộc về bạn!"));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Hung khí (Means) không hợp lệ hoặc không thuộc về bạn!"));
 
         session.setSolutionClue(selectedClue);
         session.setSolutionMeans(selectedMeans);
@@ -130,7 +132,8 @@ public class GameService {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.FS_PLACING_HINTS) {
-            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn Bác sĩ pháp y đặt Hint!");
+            throw new IllegalStateException(
+                    "Hành động bị từ chối: Hiện không phải là giai đoạn Bác sĩ pháp y đặt Hint!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
@@ -139,20 +142,23 @@ public class GameService {
         }
 
         if (hints == null || hints.size() != 6) {
-            throw new IllegalArgumentException("Bác sĩ pháp y bắt buộc phải đặt chính xác 6 viên đạn lên 6 thẻ hiện trường!");
+            throw new IllegalArgumentException(
+                    "Bác sĩ pháp y bắt buộc phải đặt chính xác 6 viên đạn lên 6 thẻ hiện trường!");
         }
 
         for (SceneTileHint boardHint : session.getBoardHints()) {
             String cardId = boardHint.getSceneCard().getId();
 
             if (!hints.containsKey(cardId)) {
-                throw new IllegalArgumentException("Thiếu Hint cho thẻ hiện trường: " + boardHint.getSceneCard().getName());
+                throw new IllegalArgumentException(
+                        "Thiếu Hint cho thẻ hiện trường: " + boardHint.getSceneCard().getName());
             }
 
             String selectedOption = hints.get(cardId);
 
             if (!boardHint.getSceneCard().getOptions().contains(selectedOption)) {
-                throw new IllegalArgumentException("Lựa chọn '" + selectedOption + "' không tồn tại trên thẻ " + boardHint.getSceneCard().getName());
+                throw new IllegalArgumentException("Lựa chọn '" + selectedOption + "' không tồn tại trên thẻ "
+                        + boardHint.getSceneCard().getName());
             }
 
             boardHint.setSelectedOption(selectedOption);
@@ -164,10 +170,10 @@ public class GameService {
     /**
      * Hàm này đại diện cho phase có người muốn phá án.
      *
-     * @param playerId Id của người đang muốn phá án
+     * @param playerId       Id của người đang muốn phá án
      * @param targetPlayerId Id của người được cho là kẻ ám sát
-     * @param clueId Hiện vật của người được cho là kẻ ám sát
-     * @param meansId Vũ khí của nguười được cho là kẻ ám sát
+     * @param clueId         Hiện vật của người được cho là kẻ ám sát
+     * @param meansId        Vũ khí của nguười được cho là kẻ ám sát
      */
     public synchronized void attemptToSolve(String playerId, String targetPlayerId, String clueId, String meansId) {
         GameSession session = getCurrentGame();
@@ -196,13 +202,13 @@ public class GameService {
         boolean isCorrectMeans = session.getSolutionMeans().getId().equals(meansId);
 
         if (isCorrectTarget && isCorrectClue && isCorrectMeans) {
-            //chuyển phase
+            // chuyển phase
             session.setCurrentPhase(GamePhase.WITNESS_REVERSAL);
         } else {
-            System.out.println("Bạn đã sai!");
+            log.info("Bạn đã sai!");
             /*
-            * Game goes on
-            */
+             * Game goes on
+             */
         }
     }
 
@@ -234,7 +240,6 @@ public class GameService {
         }
 
         player.setHasPresented(true);
-
 
     }
 
