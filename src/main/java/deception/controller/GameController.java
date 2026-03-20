@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
+@CrossOrigin(origins = "*") // Allows standalone frontend to access these APIs
 @RequestMapping("/api")
 public class GameController {
 
@@ -18,7 +19,8 @@ public class GameController {
     private final GameService gameService;
     private final GameNotificationService notificationService;
 
-    public GameController(GameStateMapper gameStateMapper, GameService gameService, GameNotificationService notificationService) {
+    public GameController(GameStateMapper gameStateMapper, GameService gameService,
+            GameNotificationService notificationService) {
         this.gameStateMapper = gameStateMapper;
         this.gameService = gameService;
         this.notificationService = notificationService;
@@ -77,7 +79,8 @@ public class GameController {
     @PostMapping("/action/solve-attempt")
     public ResponseEntity<?> attemptToSolve(@RequestBody SolveAttemptRequest request) {
         try {
-            gameService.attemptToSolve(request.getPlayerId(), request.getTargetPlayerId(), request.getClueId(), request.getMeansId());
+            gameService.attemptToSolve(request.getPlayerId(), request.getTargetPlayerId(), request.getClueId(),
+                    request.getMeansId());
 
             GameSession currentSession = gameService.getCurrentGame();
 
@@ -115,7 +118,6 @@ public class GameController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
 
     @PatchMapping("/action/replace-tile")
     public ResponseEntity<?> replaceTile(@RequestBody ReplaceTileRequest request) {
