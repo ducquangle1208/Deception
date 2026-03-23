@@ -8,8 +8,6 @@ import deception.service.GameService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-
 @RestController
 @CrossOrigin(origins = "*") // Allows standalone frontend to access these APIs
 @RequestMapping("/api")
@@ -26,18 +24,8 @@ public class GameController {
         this.notificationService = notificationService;
     }
 
-    @PostMapping("/create-real-game")
-    public ResponseEntity<GameSessionDTO> createRealGame() {
-        List<String> realPlayerIds = Arrays.asList("user_1", "user_2", "user_3", "user_4", "user_5", "user_6");
-
-        gameService.setupNewGame(realPlayerIds);
-
-        GameSession currentSession = gameService.getCurrentGame();
-        notificationService.broadcastGameState(currentSession);
-
-        GameSessionDTO responseDTO = gameStateMapper.toDTO(currentSession, "user_1");
-        return ResponseEntity.ok(responseDTO);
-    }
+    // The sandbox create-real-game endpoint has been removed. Game creation is now
+    // handled by LobbyService.
 
     @GetMapping("/current-state/{requesterId}")
     public ResponseEntity<GameSessionDTO> getCurrentState(@PathVariable String requesterId) {

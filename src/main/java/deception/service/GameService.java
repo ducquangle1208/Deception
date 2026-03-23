@@ -10,6 +10,7 @@ import deception.model.abstract_model.Card;
 import deception.model.cards.ClueCard;
 import deception.model.cards.MeansCard;
 import deception.model.cards.SceneCard;
+import deception.domain.LobbyPlayer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +28,8 @@ public class GameService {
         this.cardRegistry = cardRegistry;
     }
 
-    public void setupNewGame(List<String> playerIds) {
-        if (playerIds.size() != 6) {
+    public void setupNewGame(List<LobbyPlayer> lobbyPlayers) {
+        if (lobbyPlayers.size() != 6) {
             throw new IllegalArgumentException("Trò chơi yêu cầu chính xác 6 người chơi!");
         }
 
@@ -48,9 +49,10 @@ public class GameService {
 
         Map<String, PlayerInGame> playersMap = new HashMap<>();
         for (int i = 0; i < 6; i++) {
+            LobbyPlayer lobbyPlayer = lobbyPlayers.get(i);
             PlayerInGame player = new PlayerInGame();
-            player.setPlayerId(playerIds.get(i));
-            player.setPlayerName("Player " + (i + 1));
+            player.setPlayerId(lobbyPlayer.getPlayerId());
+            player.setPlayerName(lobbyPlayer.getUsername());
             player.setRole(roles.get(i));
             player.setHasPresented(false);
 
