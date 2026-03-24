@@ -24,9 +24,6 @@ public class GameController {
         this.notificationService = notificationService;
     }
 
-    // The sandbox create-real-game endpoint has been removed. Game creation is now
-    // handled by LobbyService.
-
     @GetMapping("/current-state/{requesterId}")
     public ResponseEntity<GameSessionDTO> getCurrentState(@PathVariable String requesterId) {
         try {

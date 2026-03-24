@@ -43,7 +43,8 @@ public class LobbyService {
     }
 
     public synchronized void setReady(String playerId, boolean isReady) {
-        if (gameStarted) return;
+        if (gameStarted)
+            return;
 
         LobbyPlayer player = players.stream()
                 .filter(p -> p.getPlayerId().equals(playerId))
@@ -74,7 +75,7 @@ public class LobbyService {
         message.put("type", "LOBBY_UPDATE");
         message.put("players", players);
         message.put("canStart", players.size() == 6 && players.stream().allMatch(LobbyPlayer::isReady));
-        
+
         messagingTemplate.convertAndSend("/topic/lobby", (Object) message);
     }
 
