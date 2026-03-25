@@ -65,6 +65,9 @@ public class GameService {
                 player.setMeansCards(drawCards(deckMeans));
                 player.setHasBadge(true);
             }
+            if (player.getRole() == RoleType.MURDERER) {
+                session.setMurdererId(player.getPlayerId());
+            }
             playersMap.put(player.getPlayerId(), player);
         }
         session.setPlayers(playersMap);

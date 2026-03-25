@@ -32,9 +32,9 @@ public class CardRegistryService {
     public void init() {
         log.info("Bắt đầu load dữ liệu thẻ bài vào RAM...");
         try {
-            allClueCards = loadCardsFromFile("/data/clue_cards.json", new TypeReference<>() {});
-            allMeansCards = loadCardsFromFile("/data/means_cards.json", new TypeReference<>() {});
-            allSceneCards = loadCardsFromFile("/data/scene_cards.json", new TypeReference<>() {});
+            allClueCards = loadCardsFromFile("/data/clue_cards.json", new TypeReference<List<ClueCard>>() {});
+            allMeansCards = loadCardsFromFile("/data/means_cards.json", new TypeReference<List<MeansCard>>() {});
+            allSceneCards = loadCardsFromFile("/data/scene_cards.json", new TypeReference<List<SceneCard>>() {});
 
             log.info("Đã load thành công: {} Clue Cards, {} Means Cards, {} Scene Cards",
                     allClueCards.size(), allMeansCards.size(), allSceneCards.size());
