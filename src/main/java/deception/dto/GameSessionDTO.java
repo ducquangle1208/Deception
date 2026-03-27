@@ -14,6 +14,7 @@ import java.util.List;
 public class GameSessionDTO {
     private String presentingPlayerId;
     private long presentationEndTime;
+    private boolean simultaneousPresentationPhase;
     private GamePhase currentPhase;
     private int currentRound;
     private RoleType winningSide;

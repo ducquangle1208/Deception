@@ -41,6 +41,7 @@ public class GameStateMapper {
                 .solutionMeans(canSeeSolution ? session.getSolutionMeans() : null)
                 .presentingPlayerId(session.getPresentingPlayerId())
                 .presentationEndTime(session.getPresentationEndTime())
+                .simultaneousPresentationPhase(session.isSimultaneousPresentationPhase())
                 .winningSide(session.getWinningSide())
                 .build();
     }

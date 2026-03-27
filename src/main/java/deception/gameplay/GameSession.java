@@ -14,6 +14,7 @@ public class GameSession {
     private GamePhase currentPhase = GamePhase.WAITING_FOR_PLAYERS;
 
     private String presentingPlayerId = null;
+    private boolean simultaneousPresentationPhase = false;
 
     private RoleType winningSide;
 

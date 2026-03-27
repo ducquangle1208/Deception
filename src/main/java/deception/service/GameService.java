@@ -88,6 +88,7 @@ public class GameService {
         if (this.currentGameSession == null) {
             throw new IllegalStateException("Chưa có ván game nào được tạo!");
         }
+        syncPresentationState(this.currentGameSession);
         return this.currentGameSession;
     }
 
@@ -169,7 +170,7 @@ public class GameService {
             boardHint.setSelectedOption(selectedOption);
         }
 
-        session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
+        startSimultaneousPresentationPhase(session);
     }
 
     /**
@@ -224,26 +225,34 @@ public class GameService {
             throw new IllegalStateException("Chỉ được trình bày trong phase Thảo luận!");
         }
 
-        if (session.getPlayers().get(playerId).getRole() == RoleType.FORENSIC_SCIENTIST) {
+        PlayerInGame player = session.getPlayers().get(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Người chơi không tồn tại!");
+        }
+
+        if (player.getRole() == RoleType.FORENSIC_SCIENTIST) {
             throw new IllegalStateException("Bác sĩ pháp y không được trình bày");
         }
 
+        if (session.isSimultaneousPresentationPhase()) {
+            long remainingSeconds = Math.max(0, (session.getPresentationEndTime() - System.currentTimeMillis() + 999) / 1000);
+            throw new IllegalStateException("Hiện đang trong 45 giây trình bày tự do. Vui lòng đợi "
+                    + remainingSeconds + " giây để chuyển sang lượt trình bày cá nhân!");
+        }
+
         if (session.isTimerActive()) {
-            long remainingSeconds = (session.getPresentationEndTime() - System.currentTimeMillis()) / 1000;
+            long remainingSeconds = Math.max(0, (session.getPresentationEndTime() - System.currentTimeMillis() + 999) / 1000);
             throw new IllegalStateException("Hành động bị từ chối: Người chơi "
                     + session.getPresentingPlayerId() + " đang trình bày. Vui lòng đợi "
                     + remainingSeconds + " giây nữa!");
         }
 
-        // Set timer 45 sec và người gần nhất trình bày
-        session.setPresentingPlayerId(playerId);
-        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
-
-        PlayerInGame player = session.getPlayers().get(playerId);
         if (player.isHasPresented()) {
             throw new IllegalStateException("Bạn đã trình bày trong vòng này rồi!");
         }
 
+        session.setPresentingPlayerId(playerId);
+        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
         player.setHasPresented(true);
 
     }
@@ -255,6 +264,10 @@ public class GameService {
      */
     public synchronized void endPresentationEarly(String playerId) {
         GameSession session = getCurrentGame();
+
+        if (session.isSimultaneousPresentationPhase()) {
+            throw new IllegalStateException("Không thể kết thúc sớm giai đoạn trình bày tự do cho tất cả người chơi!");
+        }
 
         if (session.isTimerActive() && playerId.equals(session.getPresentingPlayerId())) {
             session.setPresentationEndTime(0);
@@ -283,6 +296,10 @@ public class GameService {
         for (PlayerInGame p : session.getPlayers().values()) {
             p.setHasPresented(false);
         }
+
+        session.setPresentingPlayerId(null);
+        session.setPresentationEndTime(0);
+        session.setSimultaneousPresentationPhase(false);
 
         session.setCurrentPhase(GamePhase.FS_REPLACING_HINT);
     }
@@ -316,7 +333,7 @@ public class GameService {
 
         session.getBoardHints().add(newHint);
 
-        session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
+        startSimultaneousPresentationPhase(session);
     }
 
     public synchronized void attemptWitnessReversal(String playerId, String suspectId) {
@@ -346,5 +363,38 @@ public class GameService {
         }
 
         session.setCurrentPhase(GamePhase.GAME_OVER);
+    }
+
+    private void startSimultaneousPresentationPhase(GameSession session) {
+        session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
+        session.setPresentingPlayerId(null);
+        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
+        session.setSimultaneousPresentationPhase(true);
+
+        for (PlayerInGame participant : session.getPlayers().values()) {
+            if (participant.getRole() != RoleType.FORENSIC_SCIENTIST) {
+                participant.setHasPresented(false);
+            }
+        }
+    }
+
+    private void syncPresentationState(GameSession session) {
+        if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
+            return;
+        }
+
+        if (session.isTimerActive()) {
+            return;
+        }
+
+        if (session.isSimultaneousPresentationPhase()) {
+            session.setSimultaneousPresentationPhase(false);
+            session.setPresentationEndTime(0);
+        }
+
+        if (session.getPresentingPlayerId() != null) {
+            session.setPresentingPlayerId(null);
+            session.setPresentationEndTime(0);
+        }
     }
 }
