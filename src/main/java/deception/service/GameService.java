@@ -3,6 +3,7 @@ package deception.service;
 import deception.constant.GamePhase;
 import deception.constant.RoleType;
 import deception.constant.SceneType;
+import deception.domain.LobbyPlayer;
 import deception.gameplay.GameSession;
 import deception.gameplay.SceneTileHint;
 import deception.model.PlayerInGame;
@@ -10,15 +11,23 @@ import deception.model.abstract_model.Card;
 import deception.model.cards.ClueCard;
 import deception.model.cards.MeansCard;
 import deception.model.cards.SceneCard;
-import deception.domain.LobbyPlayer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 public class GameService {
+
+    private static final long CRIME_SELECTION_DURATION_MS = 20_000L;
+    private static final long HINT_PLACEMENT_DURATION_MS = 30_000L;
+    private static final long PRESENTATION_DURATION_MS = 45_000L;
 
     private final CardRegistryService cardRegistry;
 
@@ -30,11 +39,12 @@ public class GameService {
 
     public void setupNewGame(List<LobbyPlayer> lobbyPlayers) {
         if (lobbyPlayers.size() != 6) {
-            throw new IllegalArgumentException("Trò chơi yêu cầu chính xác 6 người chơi!");
+            throw new IllegalArgumentException("Tro choi yeu cau chinh xac 6 nguoi choi!");
         }
 
         GameSession session = new GameSession();
         session.setCurrentPhase(GamePhase.CRIME_SELECTION);
+        session.setCrimeSelectionEndTime(System.currentTimeMillis() + CRIME_SELECTION_DURATION_MS);
         session.setCurrentRound(1);
 
         List<RoleType> roles = Arrays.asList(
@@ -47,7 +57,7 @@ public class GameService {
         Collections.shuffle(deckClues);
         Collections.shuffle(deckMeans);
 
-        Map<String, PlayerInGame> playersMap = new HashMap<>();
+        Map<String, PlayerInGame> playersMap = new LinkedHashMap<>();
         for (int i = 0; i < 6; i++) {
             LobbyPlayer lobbyPlayer = lobbyPlayers.get(i);
             PlayerInGame player = new PlayerInGame();
@@ -86,10 +96,19 @@ public class GameService {
 
     public GameSession getCurrentGame() {
         if (this.currentGameSession == null) {
-            throw new IllegalStateException("Chưa có ván game nào được tạo!");
+            throw new IllegalStateException("Chua co van game nao duoc tao!");
         }
-        syncPresentationState(this.currentGameSession);
+        advanceAutomaticFlow();
         return this.currentGameSession;
+    }
+
+    public synchronized GameSession advanceAutomaticFlow() {
+        if (this.currentGameSession == null) {
+            return null;
+        }
+
+        boolean changed = applyAutomaticFlowTransitions(this.currentGameSession);
+        return changed ? this.currentGameSession : null;
     }
 
     private <T extends Card> List<T> drawCards(List<T> deck) {
@@ -105,33 +124,34 @@ public class GameService {
 
         if (session.getCurrentPhase() != GamePhase.CRIME_SELECTION) {
             throw new IllegalStateException(
-                    "Hành động bị từ chối: Hiện không phải là giai đoạn chọn Hung khí và Vật chứng!");
+                    "Hanh dong bi tu choi: Hien khong phai la giai doan chon Hung khi va Vat chung!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null) {
-            throw new IllegalArgumentException("Người chơi không tồn tại trong phòng!");
+            throw new IllegalArgumentException("Nguoi choi khong ton tai trong phong!");
         }
         if (player.getRole() != RoleType.MURDERER) {
-            throw new IllegalArgumentException("Gian lận: Chỉ Kẻ Sát Nhân mới được phép chọn Đáp án!");
+            throw new IllegalArgumentException("Gian lan: Chi Ke Sat Nhan moi duoc phep chon dap an!");
         }
 
         ClueCard selectedClue = player.getClueCards().stream()
                 .filter(c -> c.getId().equals(clueId))
                 .findFirst()
-                .orElseThrow(
-                        () -> new IllegalArgumentException("Manh mối (Clue) không hợp lệ hoặc không thuộc về bạn!"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Manh moi (Clue) khong hop le hoac khong thuoc ve ban!"));
 
         MeansCard selectedMeans = player.getMeansCards().stream()
                 .filter(m -> m.getId().equals(meansId))
                 .findFirst()
-                .orElseThrow(
-                        () -> new IllegalArgumentException("Hung khí (Means) không hợp lệ hoặc không thuộc về bạn!"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Hung khi (Means) khong hop le hoac khong thuoc ve ban!"));
 
         session.setSolutionClue(selectedClue);
         session.setSolutionMeans(selectedMeans);
+        session.setCrimeSelectionEndTime(0);
 
-        session.setCurrentPhase(GamePhase.FS_PLACING_HINTS);
+        startHintPlacementPhase(session);
     }
 
     public synchronized void placeInitialHints(String playerId, Map<String, String> hints) {
@@ -139,17 +159,17 @@ public class GameService {
 
         if (session.getCurrentPhase() != GamePhase.FS_PLACING_HINTS) {
             throw new IllegalStateException(
-                    "Hành động bị từ chối: Hiện không phải là giai đoạn Bác sĩ pháp y đặt Hint!");
+                    "Hanh dong bi tu choi: Hien khong phai la giai doan Bac si phap y dat Hint!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null || player.getRole() != RoleType.FORENSIC_SCIENTIST) {
-            throw new IllegalArgumentException("Gian lận: Chỉ Bác sĩ pháp y mới được quyền đặt Hint!");
+            throw new IllegalArgumentException("Gian lan: Chi Bac si phap y moi duoc quyen dat Hint!");
         }
 
         if (hints == null || hints.size() != 6) {
             throw new IllegalArgumentException(
-                    "Bác sĩ pháp y bắt buộc phải đặt chính xác 6 viên đạn lên 6 thẻ hiện trường!");
+                    "Bac si phap y bat buoc phai dat chinh xac 6 vien dan len 6 the hien truong!");
         }
 
         for (SceneTileHint boardHint : session.getBoardHints()) {
@@ -157,48 +177,41 @@ public class GameService {
 
             if (!hints.containsKey(cardId)) {
                 throw new IllegalArgumentException(
-                        "Thiếu Hint cho thẻ hiện trường: " + boardHint.getSceneCard().getName());
+                        "Thieu Hint cho the hien truong: " + boardHint.getSceneCard().getName());
             }
 
             String selectedOption = hints.get(cardId);
 
             if (!boardHint.getSceneCard().getOptions().contains(selectedOption)) {
-                throw new IllegalArgumentException("Lựa chọn '" + selectedOption + "' không tồn tại trên thẻ "
+                throw new IllegalArgumentException("Lua chon '" + selectedOption + "' khong ton tai tren the "
                         + boardHint.getSceneCard().getName());
             }
 
             boardHint.setSelectedOption(selectedOption);
         }
 
+        session.setHintPlacementEndTime(0);
         startSimultaneousPresentationPhase(session);
     }
 
-    /**
-     * Hàm này đại diện cho phase có người muốn phá án.
-     *
-     * @param playerId       Id của người đang muốn phá án
-     * @param targetPlayerId Id của người được cho là kẻ ám sát
-     * @param clueId         Hiện vật của người được cho là kẻ ám sát
-     * @param meansId        Vũ khí của nguười được cho là kẻ ám sát
-     */
     public synchronized void attemptToSolve(String playerId, String targetPlayerId, String clueId, String meansId) {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
-            throw new IllegalStateException("Hành động bị từ chối: Chỉ được phép phá án trong giai đoạn Thảo luận!");
+            throw new IllegalStateException("Hanh dong bi tu choi: Chi duoc phep pha an trong giai doan thao luan!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null) {
-            throw new IllegalArgumentException("Người chơi không tồn tại!");
+            throw new IllegalArgumentException("Nguoi choi khong ton tai!");
         }
 
         if (player.getRole() == RoleType.FORENSIC_SCIENTIST) {
-            throw new IllegalArgumentException("Gian lận: Bác sĩ Pháp Y không được phép phá án!");
+            throw new IllegalArgumentException("Gian lan: Bac si Phap Y khong duoc phep pha an!");
         }
 
         if (!player.isHasBadge()) {
-            throw new IllegalStateException("Bạn đã sử dụng hết Huy hiệu phá án!");
+            throw new IllegalStateException("Ban da su dung het Huy hieu pha an!");
         }
 
         player.setHasBadge(false);
@@ -208,13 +221,10 @@ public class GameService {
         boolean isCorrectMeans = session.getSolutionMeans().getId().equals(meansId);
 
         if (isCorrectTarget && isCorrectClue && isCorrectMeans) {
-            // chuyển phase
+            resetPresentationState(session);
             session.setCurrentPhase(GamePhase.WITNESS_REVERSAL);
         } else {
-            log.info("Bạn đã sai!");
-            /*
-             * Game goes on
-             */
+            log.info("Người chơi đoán sai.");
         }
     }
 
@@ -222,59 +232,25 @@ public class GameService {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
-            throw new IllegalStateException("Chỉ được trình bày trong phase Thảo luận!");
+            throw new IllegalStateException("Chi duoc trinh bay trong phase Thao luan!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null) {
-            throw new IllegalArgumentException("Người chơi không tồn tại!");
+            throw new IllegalArgumentException("Nguoi choi khong ton tai!");
         }
 
         if (player.getRole() == RoleType.FORENSIC_SCIENTIST) {
-            throw new IllegalStateException("Bác sĩ pháp y không được trình bày");
+            throw new IllegalStateException("Bac si phap y khong duoc trinh bay");
         }
 
-        if (session.isSimultaneousPresentationPhase()) {
-            long remainingSeconds = Math.max(0, (session.getPresentationEndTime() - System.currentTimeMillis() + 999) / 1000);
-            throw new IllegalStateException("Hiện đang trong 45 giây trình bày tự do. Vui lòng đợi "
-                    + remainingSeconds + " giây để chuyển sang lượt trình bày cá nhân!");
+        if (!playerId.equals(session.getPresentingPlayerId()) || !session.isTimerActive()) {
+            throw new IllegalStateException("Luot trinh bay duoc sap xep tu dong. Hay doi he thong chuyen luot.");
         }
-
-        if (session.isTimerActive()) {
-            long remainingSeconds = Math.max(0, (session.getPresentationEndTime() - System.currentTimeMillis() + 999) / 1000);
-            throw new IllegalStateException("Hành động bị từ chối: Người chơi "
-                    + session.getPresentingPlayerId() + " đang trình bày. Vui lòng đợi "
-                    + remainingSeconds + " giây nữa!");
-        }
-
-        if (player.isHasPresented()) {
-            throw new IllegalStateException("Bạn đã trình bày trong vòng này rồi!");
-        }
-
-        session.setPresentingPlayerId(playerId);
-        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
-        player.setHasPresented(true);
-
     }
 
-    /**
-     * Player can end their presentation sooner than 45 sec by calling this method.
-     *
-     * @param playerId who currently is presenting
-     */
     public synchronized void endPresentationEarly(String playerId) {
-        GameSession session = getCurrentGame();
-
-        if (session.isSimultaneousPresentationPhase()) {
-            throw new IllegalStateException("Không thể kết thúc sớm giai đoạn trình bày tự do cho tất cả người chơi!");
-        }
-
-        if (session.isTimerActive() && playerId.equals(session.getPresentingPlayerId())) {
-            session.setPresentationEndTime(0);
-            session.setPresentingPlayerId(null);
-        } else {
-            throw new IllegalStateException("Bạn không có quyền kết thúc lượt của người khác!");
-        }
+        throw new IllegalStateException("Luot trinh bay duoc tien hanh tu dong, khong the ket thuc som.");
     }
 
     public synchronized void startNextRound(String playerId) {
@@ -282,47 +258,31 @@ public class GameService {
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null || player.getRole() != RoleType.FORENSIC_SCIENTIST) {
-            throw new IllegalArgumentException("Chỉ Bác sĩ Pháp Y mới có quyền kết thúc vòng thảo luận!");
+            throw new IllegalArgumentException("Chi Bac si Phap Y moi co quyen ket thuc vong thao luan!");
         }
 
-        if (session.getCurrentRound() >= 3) {
-            session.setWinningSide(RoleType.MURDERER);
-            session.setCurrentPhase(GamePhase.GAME_OVER);
-            return;
-        }
-
-        session.setCurrentRound(session.getCurrentRound() + 1);
-
-        for (PlayerInGame p : session.getPlayers().values()) {
-            p.setHasPresented(false);
-        }
-
-        session.setPresentingPlayerId(null);
-        session.setPresentationEndTime(0);
-        session.setSimultaneousPresentationPhase(false);
-
-        session.setCurrentPhase(GamePhase.FS_REPLACING_HINT);
+        advanceToNextRound(session);
     }
 
     public synchronized void replaceSceneTile(String playerId, String oldCardId, String newCardOption) {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.FS_REPLACING_HINT) {
-            throw new IllegalStateException("Không phải lúc để thay thẻ!");
+            throw new IllegalStateException("Khong phai luc de thay the!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null || player.getRole() != RoleType.FORENSIC_SCIENTIST) {
-            throw new IllegalArgumentException("Chỉ Bác sĩ Pháp Y mới có quyền thay thế thẻ hiện trường!");
+            throw new IllegalArgumentException("Chi Bac si Phap Y moi co quyen thay the the hien truong!");
         }
 
         SceneTileHint toRemove = session.getBoardHints().stream()
                 .filter(h -> h.getSceneCard().getId().equals(oldCardId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thẻ cũ!"));
+                .orElseThrow(() -> new IllegalArgumentException("Khong tim thay the cu!"));
 
         if (toRemove.getSceneCard().getSceneType() != SceneType.RANDOM_SCENE) {
-            throw new IllegalArgumentException("Chỉ được thay thế các thẻ hiện trường ngẫu nhiên!");
+            throw new IllegalArgumentException("Chi duoc thay the cac the hien truong ngau nhien!");
         }
 
         session.getBoardHints().remove(toRemove);
@@ -340,20 +300,20 @@ public class GameService {
         GameSession session = getCurrentGame();
 
         if (session.getCurrentPhase() != GamePhase.WITNESS_REVERSAL) {
-            throw new IllegalStateException("Hành động bị từ chối: Hiện không phải là giai đoạn Lật Kèo!");
+            throw new IllegalStateException("Hanh dong bi tu choi: Hien khong phai la giai doan Lat Keo!");
         }
 
         PlayerInGame player = session.getPlayers().get(playerId);
         if (player == null || player.getRole() != RoleType.MURDERER) {
-            throw new IllegalArgumentException("Gian lận: Chỉ Kẻ Sát Nhân mới được quyền chỉ điểm Nhân Chứng!");
+            throw new IllegalArgumentException("Gian lan: Chi Ke Sat Nhan moi duoc quyen chi diem Nhan Chung!");
         }
 
         PlayerInGame suspect = session.getPlayers().get(suspectId);
         if (suspect == null) {
-            throw new IllegalArgumentException("Người bị chỉ điểm không tồn tại!");
+            throw new IllegalArgumentException("Nguoi bi chi diem khong ton tai!");
         }
         if (suspect.getPlayerId().equals(playerId)) {
-            throw new IllegalArgumentException("Sát nhân không thể tự chỉ điểm chính mình!");
+            throw new IllegalArgumentException("Sat nhan khong the tu chi diem chinh minh!");
         }
 
         if (suspect.getRole() == RoleType.WITNESS) {
@@ -362,39 +322,122 @@ public class GameService {
             session.setWinningSide(RoleType.INVESTIGATOR);
         }
 
+        resetPresentationState(session);
         session.setCurrentPhase(GamePhase.GAME_OVER);
     }
 
     private void startSimultaneousPresentationPhase(GameSession session) {
         session.setCurrentPhase(GamePhase.DISCUSSION_PRESENTATION);
-        session.setPresentingPlayerId(null);
-        session.setPresentationEndTime(System.currentTimeMillis() + 45000);
+        resetPresentationState(session);
         session.setSimultaneousPresentationPhase(true);
-
-        for (PlayerInGame participant : session.getPlayers().values()) {
-            if (participant.getRole() != RoleType.FORENSIC_SCIENTIST) {
-                participant.setHasPresented(false);
-            }
-        }
+        session.setPresentationEndTime(System.currentTimeMillis() + PRESENTATION_DURATION_MS);
     }
 
-    private void syncPresentationState(GameSession session) {
-        if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION) {
-            return;
+    private boolean applyAutomaticFlowTransitions(GameSession session) {
+        if (session.getCurrentPhase() == GamePhase.CRIME_SELECTION) {
+            return maybeAutoAssignCrimeSelection(session);
         }
 
-        if (session.isTimerActive()) {
-            return;
+        if (session.getCurrentPhase() == GamePhase.FS_PLACING_HINTS) {
+            return maybeAutoAssignHints(session);
+        }
+
+        if (session.getCurrentPhase() != GamePhase.DISCUSSION_PRESENTATION || session.isTimerActive()) {
+            return false;
         }
 
         if (session.isSimultaneousPresentationPhase()) {
             session.setSimultaneousPresentationPhase(false);
             session.setPresentationEndTime(0);
+            return startNextIndividualPresentation(session);
         }
 
         if (session.getPresentingPlayerId() != null) {
             session.setPresentingPlayerId(null);
             session.setPresentationEndTime(0);
+            return startNextIndividualPresentation(session);
+        }
+
+        return false;
+    }
+
+    private boolean maybeAutoAssignCrimeSelection(GameSession session) {
+        if (System.currentTimeMillis() < session.getCrimeSelectionEndTime()) {
+            return false;
+        }
+
+        PlayerInGame murderer = session.getPlayers().get(session.getMurdererId());
+        if (murderer == null || murderer.getClueCards().isEmpty() || murderer.getMeansCards().isEmpty()) {
+            throw new IllegalStateException("Khong the tu dong chon toi ac cho sat nhan.");
+        }
+
+        session.setSolutionClue(murderer.getClueCards().get(0));
+        session.setSolutionMeans(murderer.getMeansCards().get(0));
+        session.setCrimeSelectionEndTime(0);
+        startHintPlacementPhase(session);
+        return true;
+    }
+
+    private boolean maybeAutoAssignHints(GameSession session) {
+        if (System.currentTimeMillis() < session.getHintPlacementEndTime()) {
+            return false;
+        }
+
+        for (SceneTileHint boardHint : session.getBoardHints()) {
+            if (boardHint.getSceneCard().getOptions().isEmpty()) {
+                throw new IllegalStateException("Khong the tu dong dat hint cho the hien truong.");
+            }
+            boardHint.setSelectedOption(boardHint.getSceneCard().getOptions().get(0));
+        }
+
+        session.setHintPlacementEndTime(0);
+        startSimultaneousPresentationPhase(session);
+        return true;
+    }
+
+    private boolean startNextIndividualPresentation(GameSession session) {
+        for (PlayerInGame participant : session.getPlayers().values()) {
+            if (participant.getRole() == RoleType.FORENSIC_SCIENTIST || participant.isHasPresented()) {
+                continue;
+            }
+
+            participant.setHasPresented(true);
+            session.setPresentingPlayerId(participant.getPlayerId());
+            session.setPresentationEndTime(System.currentTimeMillis() + PRESENTATION_DURATION_MS);
+            return true;
+        }
+
+        advanceToNextRound(session);
+        return true;
+    }
+
+    private void advanceToNextRound(GameSession session) {
+        if (session.getCurrentRound() >= 3) {
+            resetPresentationState(session);
+            session.setWinningSide(RoleType.MURDERER);
+            session.setCurrentPhase(GamePhase.GAME_OVER);
+            return;
+        }
+
+        session.setCurrentRound(session.getCurrentRound() + 1);
+        resetPresentationState(session);
+        session.setCurrentPhase(GamePhase.FS_REPLACING_HINT);
+    }
+
+    private void startHintPlacementPhase(GameSession session) {
+        session.setCurrentPhase(GamePhase.FS_PLACING_HINTS);
+        session.setHintPlacementEndTime(System.currentTimeMillis() + HINT_PLACEMENT_DURATION_MS);
+    }
+
+    private void resetPresentationState(GameSession session) {
+        session.setPresentingPlayerId(null);
+        session.setPresentationEndTime(0);
+        session.setSimultaneousPresentationPhase(false);
+
+        for (PlayerInGame participant : session.getPlayers().values()) {
+            if (participant.getRole() != RoleType.FORENSIC_SCIENTIST) {
+                participant.setHasPresented(false);
+            }
         }
     }
 }

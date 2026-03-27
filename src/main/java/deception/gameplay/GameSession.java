@@ -18,6 +18,8 @@ public class GameSession {
 
     private RoleType winningSide;
 
+    private long crimeSelectionEndTime = 0;
+    private long hintPlacementEndTime = 0;
     private long presentationEndTime = 0;
 
     private Map<String, PlayerInGame> players;

@@ -13,6 +13,8 @@ import java.util.List;
 @Builder
 public class GameSessionDTO {
     private String presentingPlayerId;
+    private long crimeSelectionEndTime;
+    private long hintPlacementEndTime;
     private long presentationEndTime;
     private boolean simultaneousPresentationPhase;
     private GamePhase currentPhase;

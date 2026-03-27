@@ -40,6 +40,8 @@ public class GameStateMapper {
                 .solutionClue(canSeeSolution ? session.getSolutionClue() : null)
                 .solutionMeans(canSeeSolution ? session.getSolutionMeans() : null)
                 .presentingPlayerId(session.getPresentingPlayerId())
+                .crimeSelectionEndTime(session.getCrimeSelectionEndTime())
+                .hintPlacementEndTime(session.getHintPlacementEndTime())
                 .presentationEndTime(session.getPresentationEndTime())
                 .simultaneousPresentationPhase(session.isSimultaneousPresentationPhase())
                 .winningSide(session.getWinningSide())
